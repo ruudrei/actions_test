@@ -27,6 +27,8 @@ jobs:
           EOF
           )
 
+
+
           # Discussion本文を組み立て（YAML構文を壊さないよう安全にcatで生成）
           BODY_COMBINED=$(cat <<EOF
           ### 🏷 ${TITLE} 開発環境リリース
