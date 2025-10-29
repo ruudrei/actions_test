@@ -103,13 +103,12 @@ jobs:
 
           echo "🔍 Repository: $OWNER/$NAME"
 
-          # 既存DiscussionのIDと本文を取得
           # 既存DiscussionをRESTで取得
           DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
 
           # タイトル一致でIDと本文を抽出
           DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
-          ZDISCUSSION_BODY=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .body" | head -n 1)
+          DISCUSSION_BODY=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .body" | head -n 1)
 
           if [ "$DISCUSSION_ID" = "null" ] || [ -z "$DISCUSSION_ID" ]; then
             echo "⚠️ Discussionが存在しないため、新規作成します。"
