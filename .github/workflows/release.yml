@@ -1,79 +1,3 @@
-# name: Post release checklist
-
-# on:
-#   release:
-#     types: [published]
-
-# jobs:
-#   create_discussion:
-#     runs-on: ubuntu-latest
-#     permissions:
-#       discussions: write
-#       contents: read
-
-#     steps:
-#       - name: Create Discussion with checklist
-#         env:
-#           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#           REPO: ${{ github.repository }}
-#           TITLE: ${{ github.event.release.name }}
-#           BODY: ${{ github.event.release.body }}
-#         run: |
-#           # 顧客チェックリストを定義
-#           CHECKLIST=$(cat <<'EOF'
-#           | 顧客名 | 環境 | 反映状況 |
-#           |--------|------|----------|
-#           | 株式会社A | dev | ⬜ 未確認 |
-#           | 株式会社B | stg | ⬜ 未確認 |
-#           | 株式会社C | prod | ⬜ 未確認 |
-#           EOF
-#           )
-
-#           # Discussion本文を組み立て（YAML構文を壊さないよう安全にcatで生成）
-#           BODY_COMBINED=$(cat <<EOF
-#           ### 🏷 ${TITLE} 開発環境リリース
-
-#           #### 📋 変更内容
-#           ${BODY}
-
-#           ---
-
-#           #### 🧾 顧客別反映チェックリスト
-#           ${CHECKLIST}
-
-#           > ✅ チェックは手動で行ってください。
-#           EOF
-#           )
-
-#           # リポジトリとカテゴリIDを取得
-#           REPO_ID=$(gh api graphql -f query='query { repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") { id } }' --jq '.data.repository.id')
-
-#           CATEGORY_ID=$(gh api graphql -f query='
-#             query {
-#               repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") {
-#                 discussionCategories(first: 10) {
-#                   nodes { id name }
-#                 }
-#               }
-#             }' --jq '.data.repository.discussionCategories.nodes[] | select(.name=="General") | .id')
-
-#           # Discussion作成
-#           gh api graphql -f query='
-#             mutation($repoId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
-#               createDiscussion(input: {
-#                 repositoryId: $repoId,
-#                 categoryId: $categoryId,
-#                 title: $title,
-#                 body: $body
-#               }) {
-#                 discussion { url }
-#               }
-#             }' \
-#             -f repoId="$REPO_ID" \
-#             -f categoryId="$CATEGORY_ID" \
-#             -f title="$TITLE" \
-#             -f body="$BODY_COMBINED"
-
 name: Post release checklist
 
 on:
@@ -81,96 +5,69 @@ on:
     types: [published]
 
 jobs:
-  update_discussion:
+  create_discussion:
     runs-on: ubuntu-latest
     permissions:
       discussions: write
       contents: read
 
     steps:
-      - name: Update Discussion checklist
+      - name: Create Discussion with checklist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TITLE: ${{ github.event.release.name }}
           BODY: ${{ github.event.release.body }}
-          DISCUSSION_TITLE: "リリース反映チェックリスト"
         run: |
-          set -e
+          # 顧客チェックリストを定義
+          CHECKLIST=$(cat <<'EOF'
+          - [ ] 株式会社A
+          - [ ] 株式会社B
+          - [ ] 株式会社C
+          EOF
+          )
 
-          OWNER="${REPO%/*}"
-          NAME="${REPO#*/}"
+          # Discussion本文を組み立て（YAML構文を壊さないよう安全にcatで生成）
+          BODY_COMBINED=$(cat <<EOF
+          ### 🏷 ${TITLE} 開発環境リリース
 
-          echo "🔍 Repository: $OWNER/$NAME"
+          #### 📋 変更内容
+          ${BODY}
 
-          # 既存DiscussionをRESTで取得
-          DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
+          ---
 
-          # タイトル一致でIDと本文を抽出
-          DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
-          DISCUSSION_BODY=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .body" | head -n 1)
+          #### 🧾 顧客別反映チェックリスト
+          ${CHECKLIST}
 
-          if [ "$DISCUSSION_ID" = "null" ] || [ -z "$DISCUSSION_ID" ]; then
-            echo "⚠️ Discussionが存在しないため、新規作成します。"
+          > ✅ 各項目の完了後、チェックを入れてください。
+          EOF
+          )
 
-            CATEGORY_ID=$(gh api graphql -f query="query {
-              repository(owner: \"$OWNER\", name: \"$NAME\") {
+          # リポジトリとカテゴリIDを取得
+          REPO_ID=$(gh api graphql -f query='query { repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") { id } }' --jq '.data.repository.id')
+
+          CATEGORY_ID=$(gh api graphql -f query='
+            query {
+              repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") {
                 discussionCategories(first: 10) {
                   nodes { id name }
                 }
               }
-            }" --jq '.data.repository.discussionCategories.nodes[0].id')
+            }' --jq '.data.repository.discussionCategories.nodes[] | select(.name=="General") | .id')
 
-            BODY_INITIAL=$(cat <<'EOF'
-          ## 🧾 リリース反映チェックリスト
-
-          | リリース名 | 株式会社A (dev) | 株式会社B (stg) | 株式会社C (prod) |
-          |-------------|----------------|----------------|----------------|
-          EOF
-            )
-
-            DISCUSSION_URL=$(gh api graphql -f query="mutation(
-              \$repoId: ID!, \$categoryId: ID!, \$title: String!, \$body: String!
-            ) {
+          # Discussion作成
+          gh api graphql -f query='
+            mutation($repoId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
               createDiscussion(input: {
-                repositoryId: \$repoId,
-                categoryId: \$categoryId,
-                title: \$title,
-                body: \$body
+                repositoryId: $repoId,
+                categoryId: $categoryId,
+                title: $title,
+                body: $body
               }) {
                 discussion { url }
               }
-            }" \
-            -f repoId="$(gh api graphql -f query="query { repository(owner: \"$OWNER\", name: \"$NAME\") { id } }" --jq '.data.repository.id')" \
+            }' \
+            -f repoId="$REPO_ID" \
             -f categoryId="$CATEGORY_ID" \
-            -f title="$DISCUSSION_TITLE" \
-            -f body="$BODY_INITIAL" \
-            --jq '.data.createDiscussion.discussion.url')
-
-            echo "✅ Created new Discussion: $DISCUSSION_URL"
-            exit 0
-          fi
-
-          echo "✅ Found existing Discussion ($DISCUSSION_ID)"
-
-          # 新しいリリース行を作成
-          NEW_ROW="| ${TITLE} | ⬜ | ⬜ | ⬜ |"
-
-          # 既存本文に追記
-          UPDATED_BODY="${DISCUSSION_BODY}\n${NEW_ROW}"
-
-          # Discussion更新
-          gh api graphql -f query="mutation(
-            \$discussionId: ID!, \$body: String!
-          ) {
-            updateDiscussion(input: {
-              discussionId: \$discussionId,
-              body: \$body
-            }) {
-              discussion { url }
-            }
-          }" \
-          -f discussionId="$DISCUSSION_ID" \
-          -f body="$UPDATED_BODY"
-
-          echo "🆕 Added row for release: $TITLE"
+            -f title="$TITLE" \
+            -f body="$BODY_COMBINED"
