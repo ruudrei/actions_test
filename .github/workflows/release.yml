@@ -1,0 +1,75 @@
+name: Post release checklist
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  create_discussion:
+    runs-on: ubuntu-latest
+    permissions:
+      discussions: write
+      contents: read
+
+    steps:
+      - name: Create Discussion with checklist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TITLE: ${{ github.event.release.name }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          # 顧客チェックリストを定義
+          CHECKLIST=$(cat <<'EOF'
+          | 顧客名 | 環境 | 反映状況 |
+          |--------|------|----------|
+          | 株式会社A | dev | ⬜ 未確認 |
+          | 株式会社B | stg | ⬜ 未確認 |
+          | 株式会社C | prod | ⬜ 未確認 |
+          EOF
+          )
+
+          # Discussion本文を組み立て（YAML構文を壊さないよう安全にcatで生成）
+          BODY_COMBINED=$(cat <<EOF
+          ### 🏷 ${TITLE} 開発環境リリース
+
+          #### 📋 変更内容
+          ${BODY}
+
+          ---
+
+          #### 🧾 顧客別反映チェックリスト
+          ${CHECKLIST}
+
+          > ✅ チェックは手動で行ってください。
+          EOF
+          )
+
+          # リポジトリとカテゴリIDを取得
+          REPO_ID=$(gh api graphql -f query='query { repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") { id } }' --jq '.data.repository.id')
+
+          CATEGORY_ID=$(gh api graphql -f query='
+            query {
+              repository(owner: "'"${REPO%/*}"'", name: "'"${REPO#*/}"'") {
+                discussionCategories(first: 10) {
+                  nodes { id name }
+                }
+              }
+            }' --jq '.data.repository.discussionCategories.nodes[] | select(.name=="Releases") | .id')
+
+          # Discussion作成
+          gh api graphql -f query='
+            mutation($repoId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+              createDiscussion(input: {
+                repositoryId: $repoId,
+                categoryId: $categoryId,
+                title: $title,
+                body: $body
+              }) {
+                discussion { url }
+              }
+            }' \
+            -f repoId="$REPO_ID" \
+            -f categoryId="$CATEGORY_ID" \
+            -f title="$TITLE" \
+            -f body="$BODY_COMBINED"
