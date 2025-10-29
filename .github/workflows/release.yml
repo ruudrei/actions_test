@@ -55,7 +55,7 @@ jobs:
                   nodes { id name }
                 }
               }
-            }' --jq '.data.repository.discussionCategories.nodes[] | select(.name=="Releases") | .id')
+            }' --jq '.data.repository.discussionCategories.nodes[] | select(.name=="General") | .id')
 
           # Discussion作成
           gh api graphql -f query='
