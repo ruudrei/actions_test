@@ -104,16 +104,12 @@ jobs:
           echo "🔍 Repository: $OWNER/$NAME"
 
           # 既存DiscussionのIDと本文を取得
-          DISCUSSION_JSON=$(gh api graphql -f query="query {
-            repository(owner: \"$OWNER\", name: \"$NAME\") {
-              discussions(first: 10, query: \"$DISCUSSION_TITLE\") {
-                nodes { id title body }
-              }
-            }
-          }")
+          # 既存DiscussionをRESTで取得
+          DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
 
-          DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r '.data.repository.discussions.nodes[0].id')
-          DISCUSSION_BODY=$(echo "$DISCUSSION_JSON" | jq -r '.data.repository.discussions.nodes[0].body')
+          # タイトル一致でIDと本文を抽出
+          DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
+          ZDISCUSSION_BODY=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .body" | head -n 1)
 
           if [ "$DISCUSSION_ID" = "null" ] || [ -z "$DISCUSSION_ID" ]; then
             echo "⚠️ Discussionが存在しないため、新規作成します。"
