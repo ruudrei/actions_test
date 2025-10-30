@@ -65,17 +65,14 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   NEW_ROW="${NEW_ROW} |"
 
   # 更新されたテーブルを組み立て
-  UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
-    "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
-
-  if [[ -z "$EXISTING_ROWS" ]]; then
-    # 既存行が無ければ空行を挟まずにヘッダー・セパレータ・新行のみを出力
+  # EXISTING_ROWS が空文字または空白のみの場合は空行を挟まずヘッダ・セパレータ・新行のみを出力
+  if [[ -z "$(printf '%s' "$EXISTING_ROWS" | sed '/^[[:space:]]*$/d')" ]]; then
     UPDATED_TABLE=$(printf "%s\n%s\n%s\n" \
       "$TABLE_HEADER" "$SEPARATOR" "$NEW_ROW")
   else
-    # 既存行があれば既存行を挟んで出力
     UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
       "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
+  fi
 
   # 最終的な本文を組み立て
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_TABLE_CONTENT" "$UPDATED_TABLE")
@@ -88,8 +85,6 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   echo "PRE_TABLE_CONTENT: $PRE_TABLE_CONTENT"
   echo "UPDATED_TABLE: $UPDATED_TABLE"
   echo "UPDATED_BODY: $UPDATED_BODY"
-
-  fi
 
 else
   echo "🆕 新規にテーブルを作成"
