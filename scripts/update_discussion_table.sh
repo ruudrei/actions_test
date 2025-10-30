@@ -52,8 +52,8 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   TABLE_HEADER=$(echo "$CURRENT_BODY" | grep -m1 '^| リリース名')
   # 行頭が | に続いて - で始まる最初の行」を探し、その行全体を取得
   SEPARATOR=$(echo "$CURRENT_BODY" | grep -m1 '^|[-]')
-  # テーブルヘッダ（| リリース名）の直後にある既存の行（リリース行）を抽出して EXISTING_ROWS に格納
-  EXISTING_ROWS=$(echo "$CURRENT_BODY" | awk 'BEGIN{p=0} /^| リリース名/{p=1;next} /^|[-]/{next} {if(p)print}')
+  # テーブルヘッダ行以降の既存行を取得
+  EXISTING_ROWS=$(printf '%s\n' "$CURRENT_BODY" | awk 'BEGIN{p=0} /^\| リリース名/{p=1;next} /^\|[-]/{next} p{print}')
   # テーブルヘッダ行（| リリース名）以降を削除」して、テーブルの前にある本文部分だけを PRE_TABLE_CONTENT に格納
   PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
 
@@ -68,8 +68,19 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
     "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
 
-  # 最終的な本文を組み立て
+  if [[ -z "$EXISTING_ROWS" ]]; then
+    # 既存行が無ければ空行を挟まずにヘッダー・セパレータ・新行のみを出力
+    UPDATED_TABLE=$(printf "%s\n%s\n%s\n" \
+      "$TABLE_HEADER" "$SEPARATOR" "$NEW_ROW")
+  else
+    # 既存行があれば既存行を挟んで出力
+    UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
+      "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
+
+  # # 最終的な本文を組み立て
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_TABLE_CONTENT" "$UPDATED_TABLE")
+
+  fi
 
 
   # echoで各変数を確認
