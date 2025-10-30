@@ -73,6 +73,7 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
 
 
   # echoで各変数を確認
+  echo "✅ 変数内容確認:"
   echo "TABLE_HEADER: $TABLE_HEADER"
   echo "SEPARATOR: $SEPARATOR"
   echo "EXISTING_ROWS: $EXISTING_ROWS"
