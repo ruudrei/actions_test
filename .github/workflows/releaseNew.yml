@@ -67,7 +67,11 @@ jobs:
             echo "🆕 新しいテーブルを作成します"
             HEADER="| リリース名 | ${CUSTOMERS[*]} |"
             HEADER=$(echo "$HEADER" | sed 's/ / | /g')
-            SEPARATOR="|-------------|"$(printf '------------|' %.0s "${CUSTOMERS[@]}")
+            SEPARATOR="|-------------|"
+            for _ in "${CUSTOMERS[@]}"; do
+            SEPARATOR="${SEPARATOR}------------|"
+            done
+            
             NEW_ROW="| ${TITLE} |"
             for _ in "${CUSTOMERS[@]}"; do
               NEW_ROW="${NEW_ROW} ⬜ |"
