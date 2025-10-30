@@ -77,11 +77,8 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
     UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
       "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
 
-  # # 最終的な本文を組み立て
+  # 最終的な本文を組み立て
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_TABLE_CONTENT" "$UPDATED_TABLE")
-
-  fi
-
 
   # echoで各変数を確認
   echo "✅ 変数内容確認:"
@@ -91,6 +88,8 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   echo "PRE_TABLE_CONTENT: $PRE_TABLE_CONTENT"
   echo "UPDATED_TABLE: $UPDATED_TABLE"
   echo "UPDATED_BODY: $UPDATED_BODY"
+
+  fi
 
 else
   echo "🆕 新規にテーブルを作成"
