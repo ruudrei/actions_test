@@ -14,10 +14,11 @@ IFS=',' read -r -a CUSTOMERS <<< "${CUSTOMERS_CSV:-株式会社A,株式会社B,�
 
 echo "🔍 Repository: $OWNER/$NAME"
 
+# discussion の取得
 DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
 DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
 
-# 無ければ作成（任意）
+# discussion が無ければ作成
 if [[ -z "$DISCUSSION_ID" ]]; then
   echo "ℹ️ Discussion not found. Creating..."
   CREATED=$(gh api -X POST "repos/$OWNER/$NAME/discussions" \
@@ -26,11 +27,10 @@ if [[ -z "$DISCUSSION_ID" ]]; then
   DISCUSSION_ID=$(echo "$CREATED" | jq -r '.node_id')
 fi
 
+# で現在の本文を取得
 CURRENT_BODY=$(gh api graphql -f query='
   query($id: ID!) { node(id: $id) { ... on Discussion { body } } }
 ' -f id="$DISCUSSION_ID" --jq '.data.node.body')
-# 保険: 未定義参照を防ぐために一旦初期化しておく
-UPDATED_BODY=''
 # ex) 
 # ### 🧾 顧客別リリース反映状況
 # TABLE_HEADER="| リリース名 | 株式会社A | 株式会社B | 株式会社C |"
@@ -39,14 +39,11 @@ UPDATED_BODY=''
 # | [v1.1.0](https://github.com/${REPO}/releases/tag/v1.1.0) | ⬜ | ⬜ | ⬜ |
 # ...
 
+# 保険: 未定義参照を防ぐために一旦初期化しておく
+UPDATED_BODY=''
 
-# すでに同じリリース行が存在するならスキップする
-RELEASE_LINK="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
-if echo "$CURRENT_BODY" | grep -Fq "$RELEASE_LINK"; then
-  echo "✅ Row for ${TITLE} already exists. No change."
-  exit 0
-fi
-
+# 新しいリリース行を作成
+# 既存の本文にテーブルが存在するか確認し、ある場合は既存のテーブルに追加、無い場合は新規にテーブルを作成
 if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   echo "🧩 既存のテーブルに追加"
 
@@ -81,12 +78,7 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
 
   # echoで各変数を確認
   echo "✅ 変数内容確認:"
-  echo "TABLE_HEADER: $TABLE_HEADER"
-  echo "SEPARATOR: $SEPARATOR"
-  echo "EXISTING_ROWS: $EXISTING_ROWS"
-  echo "PRE_TABLE_CONTENT: $PRE_TABLE_CONTENT"
   echo "UPDATED_TABLE: $UPDATED_TABLE"
-  echo "UPDATED_BODY: $UPDATED_BODY"
 
 else
   echo "🆕 新規にテーブルを作成"
@@ -107,15 +99,11 @@ else
 
 fi
 
-# 更新内容が現在の本文と同じなら API 呼び出しをスキップ
-if [[ "${UPDATED_BODY:-}" == "$CURRENT_BODY" ]]; then
-  echo "ℹ️ No changes to discussion body. Skipping update."
-else
-  gh api graphql -f query='
-  mutation($id: ID!, $body: String!) {
-    updateDiscussion(input: {discussionId: $id, body: $body}) { discussion { url } }
-  }
-  ' -f id="$DISCUSSION_ID" --raw-field body="${UPDATED_BODY:-}"
+# api 呼び出しで discussion を更新
+gh api graphql -f query='
+mutation($id: ID!, $body: String!) {
+  updateDiscussion(input: {discussionId: $id, body: $body}) { discussion { url } }
+}
+' -f id="$DISCUSSION_ID" --raw-field body="${UPDATED_BODY:-}"
 
-  echo "✅ Discussion updated"
-fi
+echo "✅ Discussion updated"
