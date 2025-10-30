@@ -73,9 +73,11 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
 
 
   # echoで各変数を確認
-  echo "HEADER: $HEADER"
+  echo "TABLE_HEADER: $TABLE_HEADER"
   echo "SEPARATOR: $SEPARATOR"
-  echo "NEW_ROW: $NEW_ROW"
+  echo "EXISTING_ROWS: $EXISTING_ROWS"
+  echo "PRE_TABLE_CONTENT: $PRE_TABLE_CONTENT"
+  echo "UPDATED_TABLE: $UPDATED_TABLE"
   echo "UPDATED_BODY: $UPDATED_BODY"
 
 else
