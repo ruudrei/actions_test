@@ -88,9 +88,15 @@ jobs:
             done
             NEW_ROW="${NEW_ROW} |"
 
-            UPDATED_BODY="### 🧾 顧客別リリース反映状況\n\n${HEADER}\n${SEPARATOR}\n${NEW_ROW}"
-          fi
+            UPDATED_BODY=$(cat <<EOF
+            ### 🧾 顧客別リリース反映状況
 
+            ${HEADER}
+            ${SEPARATOR}
+            ${NEW_ROW}
+            EOF
+            )
+          fi
 
           # Discussionを更新
           gh api graphql -f query='
