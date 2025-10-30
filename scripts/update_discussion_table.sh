@@ -29,6 +29,8 @@ fi
 CURRENT_BODY=$(gh api graphql -f query='
   query($id: ID!) { node(id: $id) { ... on Discussion { body } } }
 ' -f id="$DISCUSSION_ID" --jq '.data.node.body')
+# 保険: 未定義参照を防ぐために一旦初期化しておく
+UPDATED_BODY=''
 # ex) 
 # ### 🧾 顧客別リリース反映状況
 # TABLE_HEADER="| リリース名 | 株式会社A | 株式会社B | 株式会社C |"
@@ -105,10 +107,15 @@ else
 
 fi
 
-gh api graphql -f query='
+# 更新内容が現在の本文と同じなら API 呼び出しをスキップ
+if [[ "${UPDATED_BODY:-}" == "$CURRENT_BODY" ]]; then
+  echo "ℹ️ No changes to discussion body. Skipping update."
+else
+  gh api graphql -f query='
   mutation($id: ID!, $body: String!) {
     updateDiscussion(input: {discussionId: $id, body: $body}) { discussion { url } }
   }
-' -f id="$DISCUSSION_ID" --raw-field body="$UPDATED_BODY"
+  ' -f id="$DISCUSSION_ID" --raw-field body="${UPDATED_BODY:-}"
 
-echo "✅ Discussion updated"
+  echo "✅ Discussion updated"
+fi
