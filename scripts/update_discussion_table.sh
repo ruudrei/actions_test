@@ -42,6 +42,9 @@ CURRENT_BODY=$(gh api graphql -f query='
 # 保険: 未定義参照を防ぐために一旦初期化しておく
 UPDATED_BODY=''
 
+# リリースリンク
+RELEASE_LINK="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+
 # 新しいリリース行を作成
 # 既存の本文にテーブルが存在するか確認し、ある場合は既存のテーブルに追加、無い場合は新規にテーブルを作成
 if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
