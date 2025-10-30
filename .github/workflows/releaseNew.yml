@@ -12,7 +12,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Append release info to existing discussion
+      - name: Update discussion table
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -24,9 +24,11 @@ jobs:
           OWNER="${REPO%/*}"
           NAME="${REPO#*/}"
 
+          CUSTOMERS=("株式会社A" "株式会社B" "株式会社C")
+
           echo "🔍 Repository: $OWNER/$NAME"
 
-          # 対象ディスカッションを取得
+          # 対象Discussionを取得
           DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
           DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
 
@@ -43,23 +45,35 @@ jobs:
               }
             }' -f id="$DISCUSSION_ID" --jq '.data.node.body')
 
-          # 新しいチェックリスト行を構築
-          NEW_SECTION=$(cat <<EOF
+          # 既存のテーブルがあるか確認
+          if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
+            echo "🧩 既存テーブルに行を追加します"
+            TABLE_HEADER=$(echo "$CURRENT_BODY" | grep -m1 '^| リリース名')
+            SEPARATOR=$(echo "$CURRENT_BODY" | grep -m1 '^|[-]')
+            EXISTING_ROWS=$(echo "$CURRENT_BODY" | grep -v '^| リリース名' | grep -v '^|[-]' || true)
 
-          ---
-          ### 🚀 ${TITLE}
-          ${BODY}
+            # 新しいリリース行を生成
+            NEW_ROW="| ${TITLE} |"
+            for _ in "${CUSTOMERS[@]}"; do
+              NEW_ROW="${NEW_ROW} ⬜ |"
+            done
 
-          - [ ] 株式会社A
-          - [ ] 株式会社B
-          - [ ] 株式会社C
+            UPDATED_TABLE="${TABLE_HEADER}\n${SEPARATOR}\n${EXISTING_ROWS}\n${NEW_ROW}"
 
-          > 更新日: $(date '+%Y-%m-%d %H:%M')
-          EOF
-          )
-
-          # 本文を連結
-          UPDATED_BODY="${CURRENT_BODY}${NEW_SECTION}"
+            # テーブル以外の本文部分を残す
+            PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
+            UPDATED_BODY="${PRE_TABLE_CONTENT}\n${UPDATED_TABLE}"
+          else
+            echo "🆕 新しいテーブルを作成します"
+            HEADER="| リリース名 | ${CUSTOMERS[*]} |"
+            HEADER=$(echo "$HEADER" | sed 's/ / | /g')
+            SEPARATOR="|-------------|"$(printf '------------|' %.0s "${CUSTOMERS[@]}")
+            NEW_ROW="| ${TITLE} |"
+            for _ in "${CUSTOMERS[@]}"; do
+              NEW_ROW="${NEW_ROW} ⬜ |"
+            done
+            UPDATED_BODY="### 🧾 顧客別リリース反映状況\n\n${HEADER}\n${SEPARATOR}\n${NEW_ROW}"
+          fi
 
           # Discussionを更新
           gh api graphql -f query='
