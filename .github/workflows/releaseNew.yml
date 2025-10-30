@@ -88,14 +88,11 @@ jobs:
             done
             NEW_ROW="${NEW_ROW} |"
 
-            UPDATED_BODY=$(cat <<-EOF
-            ### 🧾 顧客別リリース反映状況
-
-            ${HEADER}
-            ${SEPARATOR}
-            ${NEW_ROW}
-            EOF
-            )
+            UPDATED_BODY=$(printf "%s\n\n%s\n%s\n%s\n" \
+            "### 🧾 顧客別リリース反映状況" \
+            "$HEADER" \
+            "$SEPARATOR" \
+            "$NEW_ROW")
           fi
 
           # Discussionを更新
