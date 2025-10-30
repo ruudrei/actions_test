@@ -1,133 +1,118 @@
-name: Post release checklist
+# name: Post release checklist
 
-on:
-  release:
-    types: [published]
+# on:
+#   release:
+#     types: [published]
 
-jobs:
-  update_discussion:
-    runs-on: ubuntu-latest
-    permissions:
-      discussions: write
-      contents: read
+# jobs:
+#   update_discussion:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       discussions: write
+#       contents: read
 
-    steps:
-      - name: Update discussion table
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TITLE: ${{ github.event.release.name }}
-          BODY: ${{ github.event.release.body }}
-          DISCUSSION_TITLE: "リリース反映チェックリスト"
-        run: |
-          set -e
-          OWNER="${REPO%/*}"
-          NAME="${REPO#*/}"
+#     steps:
+#       - name: Update discussion table
+#         env:
+#           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           REPO: ${{ github.repository }}
+#           TITLE: ${{ github.event.release.name }}
+#           BODY: ${{ github.event.release.body }}
+#           DISCUSSION_TITLE: "リリース反映チェックリスト"
+#         run: |
+#           set -e
+#           OWNER="${REPO%/*}"
+#           NAME="${REPO#*/}"
 
-          CUSTOMERS=("株式会社A" "株式会社B" "株式会社C")
+#           CUSTOMERS=("株式会社A" "株式会社B" "株式会社C")
 
-          echo "🔍 Repository: $OWNER/$NAME"
+#           echo "🔍 Repository: $OWNER/$NAME"
 
-          # 対象Discussionを取得
-          DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
-          DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
+#           # 対象Discussionを取得
+#           DISCUSSION_JSON=$(gh api "repos/$OWNER/$NAME/discussions" --paginate)
+#           DISCUSSION_ID=$(echo "$DISCUSSION_JSON" | jq -r ".[] | select(.title==\"$DISCUSSION_TITLE\") | .node_id" | head -n 1)
 
-          if [ -z "$DISCUSSION_ID" ]; then
-            echo "❌ Discussion not found: $DISCUSSION_TITLE"
-            exit 1
-          fi
+#           if [ -z "$DISCUSSION_ID" ]; then
+#             echo "❌ Discussion not found: $DISCUSSION_TITLE"
+#             exit 1
+#           fi
 
-          # 現在の本文を取得
-          CURRENT_BODY=$(gh api graphql -f query='
-            query($id: ID!) {
-              node(id: $id) {
-                ... on Discussion { body }
-              }
-            }' -f id="$DISCUSSION_ID" --jq '.data.node.body')
+#           # 現在の本文を取得
+#           CURRENT_BODY=$(gh api graphql -f query='
+#             query($id: ID!) {
+#               node(id: $id) {
+#                 ... on Discussion { body }
+#               }
+#             }' -f id="$DISCUSSION_ID" --jq '.data.node.body')
 
-          # 既存のテーブルがあるか確認
-          if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
-            echo "🧩 既存テーブルに行を追加します"
+#           # 既存のテーブルがあるか確認
+#           if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
+#             echo "🧩 既存テーブルに行を追加します"
 
-            # ▼ テーブル領域だけを抜き出す（ヘッダー行以降）
-            TABLE_REGION=$(printf "%s\n" "$CURRENT_BODY" | sed -n '/^| リリース名/,$p')
-            # 過去に混入した \n という“文字列”を実体改行へ
-            TABLE_REGION=$(printf "%b" "$TABLE_REGION")
+#             TABLE_HEADER=$(echo "$CURRENT_BODY" | grep -m1 '^| リリース名')
+#             SEPARATOR=$(echo "$CURRENT_BODY" | grep -m1 '^|[-]')
+#             EXISTING_ROWS=$(echo "$CURRENT_BODY" | grep -v '^| リリース名' | grep -v '^|[-]' || true)
 
-            # ヘッダー・セパレータ・既存行を安全に抽出
-            TABLE_HEADER=$(printf "%s\n" "$TABLE_REGION" | grep -m1 '^| リリース名')
-            SEPARATOR=$(printf "%s\n" "$TABLE_REGION" | grep -m1 '^|[-]')
-            EXISTING_ROWS=$(printf "%s\n" "$TABLE_REGION" \
-                            | grep '^|' \
-                            | grep -v '^| リリース名' \
-                            | grep -v '^|[-]' || true)
+#             # 新しいリリース行を生成（リンク付き）
+#             NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+#             for _ in "${CUSTOMERS[@]}"; do
+#               NEW_ROW="${NEW_ROW} | ⬜"
+#             done
+#             NEW_ROW="${NEW_ROW} |"
 
-            # 新しいリリース行を生成（リンク付き）
-            NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
-            for _ in "${CUSTOMERS[@]}"; do
-              NEW_ROW="${NEW_ROW} | ⬜"
-            done
-            NEW_ROW="${NEW_ROW} |"
+#             # テーブル以外の本文部分を残す
+#             PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
 
-            # ▼ 見出しは常に一度だけ表示するように、前置き本文を正規化
-            HEADING="### 🧾 顧客別リリース反映状況"
-            # テーブルより前の本文を取り出し、同じ見出しがあっても削除してから1回だけ付け直す
-            PRE_TABLE_CONTENT_RAW=$(printf "%s\n" "$CURRENT_BODY" | sed '/^| リリース名/,$d')
-            PRE_TABLE_CONTENT_CLEAN=$(printf "%s\n" "$PRE_TABLE_CONTENT_RAW" \
-              | sed "/^${HEADING//\//\\/}$/d" \
-              | sed '/^[[:space:]]*$/d')
-            PRE_TABLE_CONTENT=$(printf "%s\n\n%s" "$PRE_TABLE_CONTENT_CLEAN" "$HEADING")
+#             # printfで実体改行にして組み立て（EXISTING_ROWSが空でも安全）
+#             UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
+#               "$TABLE_HEADER" \
+#               "$SEPARATOR" \
+#               "$EXISTING_ROWS" \
+#               "$NEW_ROW")
 
-            # printfで実体改行にして組み立て
-            UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
-              "$TABLE_HEADER" \
-              "$SEPARATOR" \
-              "$EXISTING_ROWS" \
-              "$NEW_ROW")
+#             UPDATED_BODY=$(printf "%s\n%s\n" \
+#               "$PRE_TABLE_CONTENT" \
+#               "$UPDATED_TABLE")
 
-            UPDATED_BODY=$(printf "%s\n\n%s\n" \
-              "$PRE_TABLE_CONTENT" \
-              "$UPDATED_TABLE")
+#           else
+#             echo "🆕 新しいテーブルを作成します"
 
-          else
-            echo "🆕 新しいテーブルを作成します"
+#             # ヘッダー行
+#             HEADER="| リリース名"
+#             for CUSTOMER in "${CUSTOMERS[@]}"; do
+#               HEADER="${HEADER} | ${CUSTOMER}"
+#             done
+#             HEADER="${HEADER} |"
 
-            # ヘッダー行
-            HEADER="| リリース名"
-            for CUSTOMER in "${CUSTOMERS[@]}"; do
-              HEADER="${HEADER} | ${CUSTOMER}"
-            done
-            HEADER="${HEADER} |"
+#             # 区切り行
+#             SEPARATOR="|-------------"
+#             for _ in "${CUSTOMERS[@]}"; do
+#               SEPARATOR="${SEPARATOR}|------------"
+#             done
+#             SEPARATOR="${SEPARATOR}|"
 
-            # 区切り行
-            SEPARATOR="|-------------"
-            for _ in "${CUSTOMERS[@]}"; do
-              SEPARATOR="${SEPARATOR}|------------"
-            done
-            SEPARATOR="${SEPARATOR}|"
+#             # 新しい行
+#             NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+#             for _ in "${CUSTOMERS[@]}"; do
+#               NEW_ROW="${NEW_ROW} | ⬜"
+#             done
+#             NEW_ROW="${NEW_ROW} |"
 
-            # 新しい行
-            NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
-            for _ in "${CUSTOMERS[@]}"; do
-              NEW_ROW="${NEW_ROW} | ⬜"
-            done
-            NEW_ROW="${NEW_ROW} |"
+#             UPDATED_BODY=$(printf "%s\n\n%s\n%s\n%s\n" \
+#             "### 🧾 顧客別リリース反映状況" \
+#             "$HEADER" \
+#             "$SEPARATOR" \
+#             "$NEW_ROW")
+#           fi
 
-            UPDATED_BODY=$(printf "%s\n\n%s\n%s\n%s\n" \
-            "### 🧾 顧客別リリース反映状況" \
-            "$HEADER" \
-            "$SEPARATOR" \
-            "$NEW_ROW")
-          fi
+#           # Discussionを更新
+#           gh api graphql -f query='
+#             mutation($id: ID!, $body: String!) {
+#               updateDiscussion(input: {discussionId: $id, body: $body}) {
+#                 discussion { url }
+#               }
+#             }' \
+#             -f id="$DISCUSSION_ID" \
+#             --raw-field body="$UPDATED_BODY"
 
-          # Discussionを更新
-          gh api graphql -f query='
-            mutation($id: ID!, $body: String!) {
-              updateDiscussion(input: {discussionId: $id, body: $body}) {
-                discussion { url }
-              }
-            }' \
-            -f id="$DISCUSSION_ID" \
-            --raw-field body="$UPDATED_BODY"
-
-          echo "✅ Discussion updated successfully!"
+#           echo "✅ Discussion updated successfully!"
