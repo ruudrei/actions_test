@@ -15,13 +15,13 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v4
 
-            - name: Debug workspace
-              run: |
-                  pwd
-                  ls -R .
+            # - name: Debug workspace
+            #   run: |
+            #       pwd
+            #       ls -R .
 
-            - name: Make script executable
-              run: chmod +x scripts/update_discussion_table.sh
+            # - name: Make script executable
+            #   run: chmod +x scripts/update_discussion_table.sh
 
             - name: Update discussion table
               env:
