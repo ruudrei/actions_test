@@ -2,7 +2,7 @@ name: Post release checklist
 
 on:
   release:
-    # types: [published]
+    types: [published]
 
 jobs:
   create_discussion:
