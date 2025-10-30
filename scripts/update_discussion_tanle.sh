@@ -30,7 +30,7 @@ CURRENT_BODY=$(gh api graphql -f query='
   query($id: ID!) { node(id: $id) { ... on Discussion { body } } }
 ' -f id="$DISCUSSION_ID" --jq '.data.node.body')
 
-# すでに同じリリース行が存在するならスキップ（冪等性）
+# すでに同じリリース行が存在するならスキップ
 RELEASE_LINK="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
 if echo "$CURRENT_BODY" | grep -Fq "$RELEASE_LINK"; then
   echo "✅ Row for ${TITLE} already exists. No change."
