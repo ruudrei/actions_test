@@ -63,21 +63,34 @@ jobs:
             # テーブル以外の本文部分を残す
             PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
             UPDATED_BODY="${PRE_TABLE_CONTENT}\n${UPDATED_TABLE}"
+            # テーブルが存在しない場合の新規作成部を修正
           else
             echo "🆕 新しいテーブルを作成します"
-            HEADER="| リリース名 | ${CUSTOMERS[*]} |"
-            HEADER=$(echo "$HEADER" | sed 's/ / | /g')
-            SEPARATOR="|-------------|"
-            for _ in "${CUSTOMERS[@]}"; do
-            SEPARATOR="${SEPARATOR}------------|"
+
+            # ヘッダー行
+            HEADER="| リリース名"
+            for CUSTOMER in "${CUSTOMERS[@]}"; do
+              HEADER="${HEADER} | ${CUSTOMER}"
             done
-            
-            NEW_ROW="| ${TITLE} |"
+            HEADER="${HEADER} |"
+
+            # 区切り行
+            SEPARATOR="|-------------"
             for _ in "${CUSTOMERS[@]}"; do
-              NEW_ROW="${NEW_ROW} ⬜ |"
+              SEPARATOR="${SEPARATOR}|------------"
             done
+            SEPARATOR="${SEPARATOR}|"
+
+            # 新しい行
+            NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+            for _ in "${CUSTOMERS[@]}"; do
+              NEW_ROW="${NEW_ROW} | ⬜"
+            done
+            NEW_ROW="${NEW_ROW} |"
+
             UPDATED_BODY="### 🧾 顧客別リリース反映状況\n\n${HEADER}\n${SEPARATOR}\n${NEW_ROW}"
           fi
+
 
           # Discussionを更新
           gh api graphql -f query='
