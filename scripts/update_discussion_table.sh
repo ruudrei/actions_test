@@ -71,6 +71,13 @@ if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
   # 最終的な本文を組み立て
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_TABLE_CONTENT" "$UPDATED_TABLE")
 
+
+  # echoで各変数を確認
+  echo "HEADER: $HEADER"
+  echo "SEPARATOR: $SEPARATOR"
+  echo "NEW_ROW: $NEW_ROW"
+  echo "UPDATED_BODY: $UPDATED_BODY"
+
 else
   echo "🆕 新規にテーブルを作成"
   HEADER="| リリース名"
@@ -88,11 +95,6 @@ else
   UPDATED_BODY=$(printf "%s\n\n%s\n%s\n%s\n" \
     "### 🧾 顧客別リリース反映状況" "$HEADER" "$SEPARATOR" "$NEW_ROW")
 
-    # echoで各変数を確認
-    echo "HEADER: $HEADER"
-    echo "SEPARATOR: $SEPARATOR"
-    echo "NEW_ROW: $NEW_ROW"
-    echo "UPDATED_BODY: $UPDATED_BODY"
 fi
 
 gh api graphql -f query='
