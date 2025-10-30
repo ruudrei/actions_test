@@ -49,9 +49,18 @@ jobs:
           if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
             echo "🧩 既存テーブルに行を追加します"
 
-            TABLE_HEADER=$(echo "$CURRENT_BODY" | grep -m1 '^| リリース名')
-            SEPARATOR=$(echo "$CURRENT_BODY" | grep -m1 '^|[-]')
-            EXISTING_ROWS=$(echo "$CURRENT_BODY" | grep -v '^| リリース名' | grep -v '^|[-]' || true)
+            # ▼ テーブル領域だけを抜き出す（ヘッダー行以降）
+            TABLE_REGION=$(printf "%s\n" "$CURRENT_BODY" | sed -n '/^| リリース名/,$p')
+            # 過去に混入した \n という“文字列”を実体改行へ
+            TABLE_REGION=$(printf "%b" "$TABLE_REGION")
+
+            # ヘッダー・セパレータ・既存行を安全に抽出
+            TABLE_HEADER=$(printf "%s\n" "$TABLE_REGION" | grep -m1 '^| リリース名')
+            SEPARATOR=$(printf "%s\n" "$TABLE_REGION" | grep -m1 '^|[-]')
+            EXISTING_ROWS=$(printf "%s\n" "$TABLE_REGION" \
+                            | grep '^|' \
+                            | grep -v '^| リリース名' \
+                            | grep -v '^|[-]' || true)
 
             # 新しいリリース行を生成（リンク付き）
             NEW_ROW="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
@@ -60,17 +69,23 @@ jobs:
             done
             NEW_ROW="${NEW_ROW} |"
 
-            # テーブル以外の本文部分を残す
-            PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
+            # ▼ 見出しは常に一度だけ表示するように、前置き本文を正規化
+            HEADING="### 🧾 顧客別リリース反映状況"
+            # テーブルより前の本文を取り出し、同じ見出しがあっても削除してから1回だけ付け直す
+            PRE_TABLE_CONTENT_RAW=$(printf "%s\n" "$CURRENT_BODY" | sed '/^| リリース名/,$d')
+            PRE_TABLE_CONTENT_CLEAN=$(printf "%s\n" "$PRE_TABLE_CONTENT_RAW" \
+              | sed "/^${HEADING//\//\\/}$/d" \
+              | sed '/^[[:space:]]*$/d')
+            PRE_TABLE_CONTENT=$(printf "%s\n\n%s" "$PRE_TABLE_CONTENT_CLEAN" "$HEADING")
 
-            # printfで実体改行にして組み立て（EXISTING_ROWSが空でも安全）
+            # printfで実体改行にして組み立て
             UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
               "$TABLE_HEADER" \
               "$SEPARATOR" \
               "$EXISTING_ROWS" \
               "$NEW_ROW")
 
-            UPDATED_BODY=$(printf "%s\n%s\n" \
+            UPDATED_BODY=$(printf "%s\n\n%s\n" \
               "$PRE_TABLE_CONTENT" \
               "$UPDATED_TABLE")
 
