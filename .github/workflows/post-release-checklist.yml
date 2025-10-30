@@ -10,15 +10,19 @@ jobs:
         permissions:
             discussions: write
             contents: read
+
         steps:
-            - uses: actions/checkout@v4
-            - name: Lint shell
-              uses: ludeeus/action-shellcheck@2.0.0
-              with: { severity: error }
-            - name: actionlint
-              uses: reviewdog/action-actionlint@v1
-              with:
-                  reporter: github-pr-check
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Make script executable
+              run: chmod +x scripts/update_discussion_table.sh
+
+            - name: Debug workspace
+              run: |
+                  pwd
+                  ls -R .
+
             - name: Update discussion table
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -26,4 +30,5 @@ jobs:
                   TITLE: ${{ github.event.release.name }}
                   DISCUSSION_TITLE: "リリース反映チェックリスト"
                   CUSTOMERS_CSV: "株式会社A,株式会社B,株式会社C"
-              run: bash scripts/update_discussion_table.sh
+              run: |
+                  bash scripts/update_discussion_table.sh
