@@ -40,7 +40,7 @@ UPDATED_BODY=''
 # ...
 
 
-# すでに同じリリース行が存在するならスキップ
+# すでに同じリリース行が存在するならスキップする
 RELEASE_LINK="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
 if echo "$CURRENT_BODY" | grep -Fq "$RELEASE_LINK"; then
   echo "✅ Row for ${TITLE} already exists. No change."
