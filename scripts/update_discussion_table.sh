@@ -29,6 +29,14 @@ fi
 CURRENT_BODY=$(gh api graphql -f query='
   query($id: ID!) { node(id: $id) { ... on Discussion { body } } }
 ' -f id="$DISCUSSION_ID" --jq '.data.node.body')
+# ex) 
+# ### 🧾 顧客別リリース反映状況
+# TABLE_HEADER="| リリース名 | 株式会社A | 株式会社B | 株式会社C |"
+# |-------------|------------|------------|------------|
+# | [v1.0.0](https://github.com/${REPO}/releases/tag/v1.0.0) | ⬜ | ⬜ | ⬜ |
+# | [v1.1.0](https://github.com/${REPO}/releases/tag/v1.1.0) | ⬜ | ⬜ | ⬜ |
+# ...
+
 
 # すでに同じリリース行が存在するならスキップ
 RELEASE_LINK="| [${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
@@ -38,22 +46,33 @@ if echo "$CURRENT_BODY" | grep -Fq "$RELEASE_LINK"; then
 fi
 
 if echo "$CURRENT_BODY" | grep -q '^| リリース名'; then
-  echo "🧩 Append to existing table"
+  echo "🧩 既存のテーブルに追加"
+
+  # 先頭が | リリース名 で始まる最初の行」を探し、その行全体を取得
   TABLE_HEADER=$(echo "$CURRENT_BODY" | grep -m1 '^| リリース名')
+  # 行頭が | に続いて - で始まる最初の行」を探し、その行全体を取得
   SEPARATOR=$(echo "$CURRENT_BODY" | grep -m1 '^|[-]')
+  # テーブルヘッダ（| リリース名）の直後にある既存の行（リリース行）を抽出して EXISTING_ROWS に格納
   EXISTING_ROWS=$(echo "$CURRENT_BODY" | awk 'BEGIN{p=0} /^| リリース名/{p=1;next} /^|[-]/{next} {if(p)print}')
+  # テーブルヘッダ行（| リリース名）以降を削除」して、テーブルの前にある本文部分だけを PRE_TABLE_CONTENT に格納
   PRE_TABLE_CONTENT=$(echo "$CURRENT_BODY" | sed '/^| リリース名/,$d')
 
+# 新しい行を作成
   NEW_ROW="$RELEASE_LINK"
+  # 各顧客列に対して未反映マークを追加
   for _ in "${CUSTOMERS[@]}"; do NEW_ROW="${NEW_ROW} | ⬜"; done
+  # 行の終わりにパイプを追加
   NEW_ROW="${NEW_ROW} |"
 
+  # 更新されたテーブルを組み立て
   UPDATED_TABLE=$(printf "%s\n%s\n%s\n%s\n" \
     "$TABLE_HEADER" "$SEPARATOR" "$EXISTING_ROWS" "$NEW_ROW")
 
+  # 最終的な本文を組み立て
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_TABLE_CONTENT" "$UPDATED_TABLE")
+
 else
-  echo "🆕 Create new table"
+  echo "🆕 新規にテーブルを作成"
   HEADER="| リリース名"
   for C in "${CUSTOMERS[@]}"; do HEADER="${HEADER} | ${C}"; done
   HEADER="${HEADER} |"
@@ -68,6 +87,12 @@ else
 
   UPDATED_BODY=$(printf "%s\n\n%s\n%s\n%s\n" \
     "### 🧾 顧客別リリース反映状況" "$HEADER" "$SEPARATOR" "$NEW_ROW")
+
+    # echoで各変数を確認
+    echo "HEADER: $HEADER"
+    echo "SEPARATOR: $SEPARATOR"
+    echo "NEW_ROW: $NEW_ROW"
+    echo "UPDATED_BODY: $UPDATED_BODY"
 fi
 
 gh api graphql -f query='
