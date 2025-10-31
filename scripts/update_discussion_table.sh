@@ -48,15 +48,20 @@ UPDATED_BODY=''
 # 表形式からチェックリスト形式への移行と追加に対応
 SECTION_HEADER='### 🧾 顧客別リリース反映状況'
 
+
 # リリース名（Release.name）を取得（なければ空）
 RELEASE_NAME=$(gh api -X GET "repos/$OWNER/$NAME/releases/tags/$TITLE" --jq '.name' 2>/dev/null || true)
 if [[ "$RELEASE_NAME" == "null" ]]; then RELEASE_NAME=""; fi
 
+# クリック可能なリリースリンク（テーブル用の先頭パイプは付けない）
+RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+
+
 # 追加する親行を作成
 if [[ -n "$RELEASE_NAME" && "$RELEASE_NAME" != "$TITLE" ]]; then
-  PARENT_LINE="- [ ] ${TITLE}: ${RELEASE_NAME} の追加"
+  PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME} の追加"
 else
-  PARENT_LINE="- [ ] ${TITLE} の追加"
+  PARENT_LINE="- [ ] ${RELEASE_LINK} の追加"
 fi
 
 # 子行（顧客）を作成
