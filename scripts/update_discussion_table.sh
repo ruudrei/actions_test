@@ -99,12 +99,12 @@ RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${RELEASE_TAG})
 # 追加する親行を作成
 # TITLE にすでに説明（例: v1.2.3:修正 や 1.2.3:修正）が含まれる場合は name を併記せず重複回避
 if [[ "$TITLE" =~ ^[vV]?[0-9]+(\.[0-9]+)+: ]]; then
-  PARENT_LINE="- [ ] ${RELEASE_LINK} の追加"
+  PARENT_LINE="- [ ] ${RELEASE_LINK} "
 else
   if [[ -n "$RELEASE_NAME" && "$RELEASE_NAME" != "$RELEASE_TAG" ]]; then
-    PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME} の追加"
+    PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME}"
   else
-    PARENT_LINE="- [ ] ${RELEASE_LINK} の追加"
+    PARENT_LINE="- [ ] ${RELEASE_LINK}"
   fi
 fi
 
@@ -132,12 +132,12 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   CLEANED_AFTER=$(printf '%s' "$CLEANED_AFTER" | awk 'BEGIN{blank=0} {if(NF==0){blank++; if(blank==1) print; else next} else {blank=0; print}}')
   
   # 直前の本文と新しいリストの間に必ず空行を入れて、Markdown のリスト描画崩れを防ぐ
-  UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$NEW_BLOCK")
+  UPDATED_SECTION=$(printf "\n%s\n\n%s" "$CLEANED_AFTER" "$NEW_BLOCK")
   
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
   echo "🆕 セクションを新規作成"
-  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$NEW_BLOCK")
+  UPDATED_BODY=$(printf "%s\n\n%s" "$CURRENT_BODY" "$NEW_BLOCK")
 fi
 
 # api 呼び出しで discussion を更新
