@@ -116,6 +116,9 @@ done
 
 NEW_BLOCK=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
 
+echo "CURRENT_BODY: $CURRENT_BODY"
+
+
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   echo "🧩 既存セクションに追記"
 
@@ -139,6 +142,11 @@ else
   echo "🆕 セクションを新規作成"
   UPDATED_BODY=$(printf "%s\n\n%s" "$CURRENT_BODY" "$NEW_BLOCK")
 fi
+
+echo "✅ UPDATED_BODY preview:"
+echo "---------------------------------"
+echo "$UPDATED_BODY"
+echo "---------------------------------"
 
 # api 呼び出しで discussion を更新
 gh api graphql -f query='
