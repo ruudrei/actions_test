@@ -95,29 +95,17 @@ if [[ "$RELEASE_NAME" == "null" ]]; then RELEASE_NAME=""; fi
 # クリック可能なリリースリンク（リンク先はタグ、表示は TITLE）
 RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${RELEASE_TAG})"
 
+# 追加する親行（リリースリンク）を作成
+PARENT_LINE="- [ ] ${RELEASE_LINK} "
 
-# 追加する親行を作成
-# TITLE にすでに説明（例: v1.2.3:修正 や 1.2.3:修正）が含まれる場合は name を併記せず重複回避
-if [[ "$TITLE" =~ ^[vV]?[0-9]+(\.[0-9]+)+: ]]; then
-  PARENT_LINE="- [ ] ${RELEASE_LINK} "
-else
-  if [[ -n "$RELEASE_NAME" && "$RELEASE_NAME" != "$RELEASE_TAG" ]]; then
-    PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME}"
-  else
-    PARENT_LINE="- [ ] ${RELEASE_LINK}"
-  fi
-fi
-
-# 子行（顧客）を作成
+# 子行（顧客別チェック項目）を作成
 CHILD_LINES=""
 for C in "${CUSTOMERS[@]}"; do
   CHILD_LINES+=$(printf "\n  - [ ] %s" "$C")
 done
 
+# 既存の本文に追加するため、新しいブロックを作成
 NEW_BLOCK=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
-
-echo "CURRENT_BODY: $CURRENT_BODY"
-
 
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   echo "🧩 既存セクションに追記"
@@ -143,9 +131,9 @@ else
   UPDATED_BODY=$(printf "%s\n\n%s" "$CURRENT_BODY" "$NEW_BLOCK")
 fi
 
-echo "✅ UPDATED_BODY preview:"
+echo "✅ NEW_BLOCK preview:"
 echo "---------------------------------"
-echo "$UPDATED_BODY"
+echo "$NEW_BLOCK"
 echo "---------------------------------"
 
 # api 呼び出しで discussion を更新
