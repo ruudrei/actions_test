@@ -49,19 +49,63 @@ UPDATED_BODY=''
 SECTION_HEADER='### 🧾 顧客別リリース反映状況'
 
 
+# リリースタグ
+# - RELEASE_TAG が未指定なら、TITLE 先頭から "v?x.x.x" を抽出
+# - リポジトリ側のタグが v 付き/なし両方の可能性があるため、候補を両方試す
+RELEASE_TAG="${RELEASE_TAG:-}"
+if [[ -z "$RELEASE_TAG" ]]; then
+  CANDIDATES=()
+  if [[ "$TITLE" =~ ([vV]?)([0-9]+(\.[0-9]+)+) ]]; then
+    PREFIX="${BASH_REMATCH[1]}"
+    VERSION_CORE="${BASH_REMATCH[2]}"
+    if [[ -n "$PREFIX" ]]; then
+      CANDIDATES+=("v${VERSION_CORE}" "${VERSION_CORE}")
+    else
+      CANDIDATES+=("${VERSION_CORE}" "v${VERSION_CORE}")
+    fi
+  fi
+
+  # バージョン候補が見つからない場合は、リリース一覧から name 一致で tag_name を取得
+  if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
+    NAME_LOOKUP_TAG=$(gh api -X GET "repos/$OWNER/$NAME/releases" --paginate --jq "(.[] | select(.name==\"$TITLE\") | .tag_name) // empty" 2>/dev/null | head -n1 || true)
+    if [[ -n "$NAME_LOOKUP_TAG" ]]; then
+      CANDIDATES+=("$NAME_LOOKUP_TAG")
+    fi
+  fi
+
+  # それでも候補が無ければ、最後の手段として TITLE を候補に
+  if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
+    CANDIDATES+=("$TITLE")
+  fi
+
+  WORKING_TAG=""
+  for cand in "${CANDIDATES[@]}"; do
+    if gh api -X GET "repos/$OWNER/$NAME/releases/tags/$cand" >/dev/null 2>&1; then
+      WORKING_TAG="$cand"
+      break
+    fi
+  done
+  RELEASE_TAG="${WORKING_TAG:-${CANDIDATES[0]}}"
+fi
+
 # リリース名（Release.name）を取得（なければ空）
-RELEASE_NAME=$(gh api -X GET "repos/$OWNER/$NAME/releases/tags/$TITLE" --jq '.name' 2>/dev/null || true)
+RELEASE_NAME=$(gh api -X GET "repos/$OWNER/$NAME/releases/tags/$RELEASE_TAG" --jq '.name' 2>/dev/null || true)
 if [[ "$RELEASE_NAME" == "null" ]]; then RELEASE_NAME=""; fi
 
-# クリック可能なリリースリンク（テーブル用の先頭パイプは付けない）
-RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${TITLE})"
+# クリック可能なリリースリンク（リンク先はタグ、表示は TITLE）
+RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${RELEASE_TAG})"
 
 
 # 追加する親行を作成
-if [[ -n "$RELEASE_NAME" && "$RELEASE_NAME" != "$TITLE" ]]; then
-  PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME} の追加"
-else
+# TITLE にすでに説明（例: v1.2.3:修正 や 1.2.3:修正）が含まれる場合は name を併記せず重複回避
+if [[ "$TITLE" =~ ^[vV]?[0-9]+(\.[0-9]+)+: ]]; then
   PARENT_LINE="- [ ] ${RELEASE_LINK} の追加"
+else
+  if [[ -n "$RELEASE_NAME" && "$RELEASE_NAME" != "$RELEASE_TAG" ]]; then
+    PARENT_LINE="- [ ] ${RELEASE_LINK}: ${RELEASE_NAME} の追加"
+  else
+    PARENT_LINE="- [ ] ${RELEASE_LINK} の追加"
+  fi
 fi
 
 # 子行（顧客）を作成
