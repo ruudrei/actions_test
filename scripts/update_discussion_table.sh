@@ -131,7 +131,8 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   # 余計な先頭の空行は1つに圧縮
   CLEANED_AFTER=$(printf '%s' "$CLEANED_AFTER" | awk 'BEGIN{blank=0} {if(NF==0){blank++; if(blank==1) print; else next} else {blank=0; print}}')
   
-  UPDATED_SECTION=$(printf "%s\n\n%s%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$NEW_BLOCK")
+  # 直前の本文と新しいリストの間に必ず空行を入れて、Markdown のリスト描画崩れを防ぐ
+  UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$NEW_BLOCK")
   
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
