@@ -123,12 +123,12 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
     UPDATED_SECTION=$(printf "%s\n\n%s" "$SECTION_HEADER" "$UPDATED_AFTER")
   else
     echo "🧩 カテゴリ(${LABEL_JA})を新規作成して追記"
-    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$CATEGORY_HEADER" "$NEW_ITEM---")
+    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$CATEGORY_HEADER" "$NEW_ITEM\n---")
   fi
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
   echo "🆕 セクションを新規作成"
-  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$CATEGORY_HEADER" "$NEW_ITEM---")
+  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$CATEGORY_HEADER" "$NEW_ITEM\n---")
 fi
 
 # Discussion 本文を更新
