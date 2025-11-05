@@ -107,20 +107,33 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
 
   if printf '%s\n' "$CLEANED_AFTER" | grep -q "^${CATEGORY_HEADER}$"; then
     echo "🔁 既存カテゴリ(${LABEL_JA})に追記"
+    # 対象カテゴリブロックの開始・終了行を取得してから挿入位置を決定
+    START_LINE=$(printf '%s\n' "$CLEANED_AFTER" | awk -v ch="${CATEGORY_HEADER}" '$0==ch{print NR; exit}')
+
     # カテゴリ終端（--- または次の ### 見出しの直前）に NEW_ITEM を挿入
-    UPDATED_AFTER=$(printf '%s\n' "$CLEANED_AFTER" | awk -v ch="${CATEGORY_HEADER}" -v nb_no_rule="${NEW_ITEM}" -v nb_with_rule="${NEW_ITEM_WITH_RULE}" '
-      BEGIN{in_cat=0; inserted=0}
-      {
-        if ($0==ch) { print $0; in_cat=1; next }
-        if (in_cat && $0=="---" && !inserted) { print ""; printf "%s", nb_no_rule; inserted=1; print $0; next }
-        if (in_cat && $0 ~ /^### / && !inserted) { print ""; printf "%s", nb_with_rule; inserted=1; print $0; in_cat=0; next }
-        if (in_cat && $0 ~ /^### /) { in_cat=0 }
-        print $0
-      }
-      END{
-        if (in_cat && !inserted) { print ""; printf "%s", nb_with_rule }
-      }
-    ')
+    END_LINE=$(printf '%s\n' "$CLEANED_AFTER" | awk -v start="${START_LINE}" 'NR>start && /^### /{print NR; exit} END{ if (NR>=start) print NR+1 }')
+
+    # 分割
+    BEFORE_PART=""
+    if [ "${START_LINE}" -gt 1 ]; then
+      BEFORE_PART=$(printf '%s\n' "$CLEANED_AFTER" | sed -n "1,$((START_LINE-1))p")
+    fi
+
+    # カテゴリブロック（開始〜終了行）
+    CATEGORY_BLOCK=$(printf '%s\n' "$CLEANED_AFTER" | sed -n "${START_LINE},$((END_LINE-1))p")
+
+    # カテゴリブロックの前後を取得
+    AFTER_PART=$(printf '%s\n' "$CLEANED_AFTER" | sed -n "${END_LINE},\$p")
+
+    if printf '%s\n' "$CATEGORY_BLOCK" | grep -q '^---$'; then
+      # 既存の区切り線の直前に挿入（区切り線は既存を利用）
+      MODIFIED_BLOCK=$(printf '%s\n' "$CATEGORY_BLOCK" | awk -v nb="${NEW_ITEM}" 'BEGIN{done=0} { if (!done && $0=="---") { print ""; printf "%s", nb; print $0; done=1; next } print }')
+    else
+      # 区切り線が無い場合は末尾に（空行→---→空行を含めて）追記
+      MODIFIED_BLOCK=$(printf '%s\n\n%s' "$CATEGORY_BLOCK" "$NEW_ITEM_WITH_RULE")
+    fi
+
+    UPDATED_AFTER=$(printf '%s\n%s\n%s\n' "$BEFORE_PART" "$MODIFIED_BLOCK" "$AFTER_PART")
     UPDATED_SECTION=$(printf "%s\n\n%s" "$SECTION_HEADER" "$UPDATED_AFTER")
   else
     echo "🧩 カテゴリ(${LABEL_JA})を新規作成して追記"
