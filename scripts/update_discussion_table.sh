@@ -167,17 +167,17 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
         if (in_sub) { print ""; printf "%s", nb }
       }
     ')
-    UPDATED_SECTION=$(printf "%s\n\n%s" "$SECTION_HEADER" "$UPDATED_AFTER")
+    UPDATED_SECTION=$(printf "%s\n\n%s\n" "$SECTION_HEADER" "$UPDATED_AFTER")
   else
     echo "🧩 サブセクション(${RELEASE_KIND})を新規作成して追記"
     # 直前の本文と新しいリストの間に必ず空行を入れて描画崩れを防ぐ
-    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$SUB_HEADER" "$NEW_BLOCK")
+    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s\n" "$SECTION_HEADER" "$CLEANED_AFTER" "$SUB_HEADER" "$NEW_BLOCK")
   fi
 
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
   echo "🆕 セクションを新規作成"
-  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$SUB_HEADER" "$NEW_BLOCK")
+  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s\n" "$CURRENT_BODY" "$SECTION_HEADER" "$SUB_HEADER" "$NEW_BLOCK")
 fi
 
 echo "✅ NEW_BLOCK preview:"
