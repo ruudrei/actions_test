@@ -93,6 +93,7 @@ for C in "${CUSTOMERS[@]}"; do
   CHILD_LINES+=$(printf "\n  - [ ] %s" "$C")
 done
 NEW_ITEM=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
+NEW_ITEM_WITH_RULE=$(printf "%s---\n\n" "$NEW_ITEM")
 
 # セクションの存在確認
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
@@ -107,28 +108,28 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   if printf '%s\n' "$CLEANED_AFTER" | grep -q "^${CATEGORY_HEADER}$"; then
     echo "🔁 既存カテゴリ(${LABEL_JA})に追記"
     # カテゴリ終端（--- または次の ### 見出しの直前）に NEW_ITEM を挿入
-    UPDATED_AFTER=$(printf '%s\n' "$CLEANED_AFTER" | awk -v ch="${CATEGORY_HEADER}" -v nb="${NEW_ITEM}" '
+    UPDATED_AFTER=$(printf '%s\n' "$CLEANED_AFTER" | awk -v ch="${CATEGORY_HEADER}" -v nb_no_rule="${NEW_ITEM}" -v nb_with_rule="${NEW_ITEM_WITH_RULE}" '
       BEGIN{in_cat=0; inserted=0}
       {
         if ($0==ch) { print $0; in_cat=1; next }
-        if (in_cat && $0=="---" && !inserted) { print ""; printf "%s", nb; inserted=1; print $0; next }
-        if (in_cat && $0 ~ /^### / && !inserted) { print ""; printf "%s", nb; inserted=1; print $0; in_cat=0; next }
+        if (in_cat && $0=="---" && !inserted) { print ""; printf "%s", nb_no_rule; inserted=1; print $0; next }
+        if (in_cat && $0 ~ /^### / && !inserted) { print ""; printf "%s", nb_with_rule; inserted=1; print $0; in_cat=0; next }
         if (in_cat && $0 ~ /^### /) { in_cat=0 }
         print $0
       }
       END{
-        if (in_cat && !inserted) { print ""; printf "%s", nb; print "---" }
+        if (in_cat && !inserted) { print ""; printf "%s", nb_with_rule }
       }
     ')
     UPDATED_SECTION=$(printf "%s\n\n%s" "$SECTION_HEADER" "$UPDATED_AFTER")
   else
     echo "🧩 カテゴリ(${LABEL_JA})を新規作成して追記"
-    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$CATEGORY_HEADER" "$NEW_ITEM\n---")
+    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$CATEGORY_HEADER" "$NEW_ITEM_WITH_RULE")
   fi
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
   echo "🆕 セクションを新規作成"
-  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$CATEGORY_HEADER" "$NEW_ITEM\n---")
+  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s" "$CURRENT_BODY" "$CATEGORY_HEADER" "$NEW_ITEM_WITH_RULE")
 fi
 
 # Discussion 本文を更新
