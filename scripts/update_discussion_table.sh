@@ -128,8 +128,14 @@ done
 # 既存の本文に追加するため、新しいブロックを作成
 NEW_BLOCK=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
 
-# サブセクション（種別）ヘッダ
-SUB_HEADER="#### ${RELEASE_KIND}"
+# サブセクション（種別）ヘッダ（日本語ラベルに変換）
+case "$RELEASE_KIND" in
+  v)          SUB_HEADER_LABEL="フロントエンド" ;;
+  backend_v)  SUB_HEADER_LABEL="バックエンド" ;;
+  learning_v) SUB_HEADER_LABEL="ラーニング" ;;
+  *)          SUB_HEADER_LABEL="$RELEASE_KIND" ;;
+esac
+SUB_HEADER="#### ${SUB_HEADER_LABEL}"
 
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   echo "🧩 既存セクションに追記"
