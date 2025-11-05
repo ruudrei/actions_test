@@ -42,6 +42,12 @@ CURRENT_BODY=$(gh api graphql -f query='
 #   - [ ] 株式会社B
 #   - [ ] 株式会社C
 
+# CURRENTBODYの中身を確認
+echo "✅ CURRENT_BODY preview:"
+echo "---------------------------------"
+echo "$CURRENT_BODY"
+echo "---------------------------------"
+
 # 保険: 未定義参照を防ぐために一旦初期化しておく
 UPDATED_BODY=''
 
