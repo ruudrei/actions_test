@@ -92,8 +92,8 @@ CHILD_LINES=""
 for C in "${CUSTOMERS[@]}"; do
   CHILD_LINES+=$(printf "\n  - [ ] %s" "$C")
 done
-NEW_ITEM=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
-NEW_ITEM_WITH_RULE=$(printf "%s---\n\n" "$NEW_ITEM")
+NEW_ITEM=$(printf "%s%s" "$PARENT_LINE" "$CHILD_LINES")
+NEW_ITEM_WITH_RULE=$(printf "%s\n---\n\n" "$NEW_ITEM")
 
 # セクションの存在確認
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
