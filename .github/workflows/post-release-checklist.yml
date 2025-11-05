@@ -6,6 +6,11 @@ on:
 
 jobs:
     update_discussion:
+        # リリースタグが v / backend_v / learning_v のときのみ実行
+        if: >-
+            startsWith(github.event.release.tag_name, 'v') ||
+            startsWith(github.event.release.tag_name, 'backend_v') ||
+            startsWith(github.event.release.tag_name, 'learning_v')
         runs-on: ubuntu-latest
         permissions:
             discussions: write
@@ -20,6 +25,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   REPO: ${{ github.repository }}
                   TITLE: ${{ github.event.release.name }}
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
                   DISCUSSION_TITLE: "リリース反映チェックリスト"
                   CUSTOMERS_CSV: "株式会社A,株式会社B,株式会社C"
               run: |

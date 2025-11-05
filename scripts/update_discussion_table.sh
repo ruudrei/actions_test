@@ -95,7 +95,22 @@ if [[ "$RELEASE_NAME" == "null" ]]; then RELEASE_NAME=""; fi
 # クリック可能なリリースリンク（リンク先はタグ、表示は TITLE）
 RELEASE_LINK="[${TITLE}](https://github.com/${REPO}/releases/tag/${RELEASE_TAG})"
 
-# 追加する親行（リリースリンク）を作成
+# リリース種別（v | backend_v | learning_v）の判定
+RELEASE_KIND=""
+case "$RELEASE_TAG" in
+  backend_v*) RELEASE_KIND="backend_v" ;;
+  learning_v*) RELEASE_KIND="learning_v" ;;
+  v*) RELEASE_KIND="v" ;;
+  *) RELEASE_KIND="" ;;
+esac
+
+# 種別が対象外なら終了（ワークフローは成功としてスキップ）
+if [[ -z "$RELEASE_KIND" ]]; then
+  echo "⏭️ Skip: Not a target release tag (v|backend_v|learning_v). tag=${RELEASE_TAG}"
+  exit 0
+fi
+
+# 追加する親行（リリースリンク）を作成（種別はサブセクションで明示する）
 PARENT_LINE="- [ ] ${RELEASE_LINK} "
 
 # 子行（顧客別チェック項目）を作成
@@ -106,6 +121,9 @@ done
 
 # 既存の本文に追加するため、新しいブロックを作成
 NEW_BLOCK=$(printf "%s%s\n\n" "$PARENT_LINE" "$CHILD_LINES")
+
+# サブセクション（種別）ヘッダ
+SUB_HEADER="#### ${RELEASE_KIND}"
 
 if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   echo "🧩 既存セクションに追記"
@@ -122,13 +140,32 @@ if echo "$CURRENT_BODY" | grep -q "^${SECTION_HEADER}$"; then
   # 余計な先頭の空行は1つに圧縮
   CLEANED_AFTER=$(printf '%s' "$CLEANED_AFTER" | awk 'BEGIN{blank=0} {if(NF==0){blank++; if(blank==1) print; else next} else {blank=0; print}}')
   
-  # 直前の本文と新しいリストの間に必ず空行を入れて、Markdown のリスト描画崩れを防ぐ
-  UPDATED_SECTION=$(printf "\n%s\n\n%s" "$CLEANED_AFTER" "$NEW_BLOCK")
-  
+  # 種別サブヘッダの有無で分岐
+  if printf '%s\n' "$CLEANED_AFTER" | grep -q "^${SUB_HEADER}$"; then
+    echo "🔁 既存のサブセクション(${RELEASE_KIND})に追記"
+    # 対象サブセクションの末尾に NEW_BLOCK を挿入
+    UPDATED_AFTER=$(printf '%s\n' "$CLEANED_AFTER" | awk -v sh="${SUB_HEADER}" -v nb="${NEW_BLOCK}" '
+      BEGIN{in_sub=0}
+      {
+        if ($0==sh) { print $0; in_sub=1; next }
+        if (in_sub && $0 ~ /^#### /) { print ""; printf "%s", nb; in_sub=0 }
+        print $0
+      }
+      END{
+        if (in_sub) { print ""; printf "%s", nb }
+      }
+    ')
+    UPDATED_SECTION=$(printf "%s\n\n%s" "$SECTION_HEADER" "$UPDATED_AFTER")
+  else
+    echo "🧩 サブセクション(${RELEASE_KIND})を新規作成して追記"
+    # 直前の本文と新しいリストの間に必ず空行を入れて描画崩れを防ぐ
+    UPDATED_SECTION=$(printf "%s\n\n%s\n\n%s\n\n%s" "$SECTION_HEADER" "$CLEANED_AFTER" "$SUB_HEADER" "$NEW_BLOCK")
+  fi
+
   UPDATED_BODY=$(printf "%s\n%s\n" "$PRE_SECTION" "$UPDATED_SECTION")
 else
   echo "🆕 セクションを新規作成"
-  UPDATED_BODY=$(printf "%s\n\n%s" "$CURRENT_BODY" "$NEW_BLOCK")
+  UPDATED_BODY=$(printf "%s\n\n%s\n\n%s\n\n%s" "$CURRENT_BODY" "$SECTION_HEADER" "$SUB_HEADER" "$NEW_BLOCK")
 fi
 
 echo "✅ NEW_BLOCK preview:"
